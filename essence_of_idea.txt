@@ -1,0 +1,10 @@
+1. Feed an image
+2. Get a theme
+3. Understand the significance
+4. Generate poem
+5. Add a new image
+6 Repeate steps 2 & 3
+7. the critic decideds whether the addition is good or not. if not, regenerate.
+8. Repeat the proces for any any essentially changing based on the that specific part of the poem.
+
+"A Control-Net for Literature".

@@ -1,11 +1,32 @@
 import random
 import streamlit as st
+import ssl
+from requests.exceptions import RequestException
 
 from utils import _load_image_as_base64
 from utils import _generate_poem
 from utils import _random_concept
 from utils import _common_themes
+from utils import _generate_text
 from utils import URLS
+
+def _critique_poem(poem):
+    """
+    Critique the poem using the language model.
+    """
+    prompt = f"""
+    Evaluate the following poem and determine if the addition is good enough. 
+    Respond only with "yes" or "no".
+
+    Poem:
+    {poem}
+    """
+    try:
+        output = _generate_text(prompt)  # Use your existing _generate_text function
+        return output.strip().lower()  # Normalize the response to lowercase for comparison
+    except (ssl.SSLError, RequestException) as e:
+        st.error(f"Network error occurred: {str(e)}. Please try again.")
+        return None
 
 def main():
     """
@@ -44,9 +65,11 @@ def main():
         unsafe_allow_html=True
     )
 
-    # Initialize session state for responses if not already present
+    # Initialize session state for responses and global first generation if not already present
     if 'responses' not in st.session_state:
         st.session_state.responses = [None] * len(URLS)
+    if 'is_first_global_generation' not in st.session_state:
+        st.session_state.is_first_global_generation = True
 
     page_index = st.session_state.get('page_index', 0)
 
@@ -64,10 +87,48 @@ def main():
         st.write(f'Theme: {theme["name"]}')
         st.write(f'Significance: {theme["significance"]}')
 
-        # Generate poem and replace the existing response for the current page
-        poem = _generate_poem(concept, theme, url=img_base64)
-        st.session_state.responses[page_index] = poem  # Store the poem in session state
-        st.write(poem)
+        generation = 1
+        max_generations = 10
+        poem = None
+        critique_result = None
+        found_yes = False  # Flag to check if we've found a "yes"
+
+        while generation <= max_generations and not found_yes:
+            try:
+                poem = _generate_poem(concept, theme, url=img_base64)
+
+                if st.session_state.is_first_global_generation:
+                    critique_result = "yes"
+                    st.write(f"Decision for generation {generation}: yes, no critic for the first generation!")
+                    st.session_state.is_first_global_generation = False
+                else:
+                    critique_result = _critique_poem(poem)
+                    if critique_result is None:
+                        st.error("Network error occurred during critique. Please try again.")
+                        break
+                
+                st.write(f"Decision for generation {generation}: {critique_result}")
+
+                if critique_result == "yes" or critique_result == '""yes""' or critique_result == "'yes'" or critique_result == 'yes.':
+                    found_yes = True
+                    st.session_state.responses[page_index] = poem
+                    st.write("Final poem:")
+                    st.write(poem)
+                else:
+                    generation += 1
+
+            except (ssl.SSLError, RequestException) as e:
+                st.error(f"Network error occurred: {str(e)}. Please try again.")
+                break
+
+        # This block will only execute if we've gone through all generations without a "yes"
+        if not found_yes:
+            if poem:
+                st.write("Reached maximum generations without a satisfactory poem.")
+                st.write("Last generated poem:")
+                st.write(poem)
+            else:
+                st.error("Failed to generate a poem due to network errors. Please try again.")
 
     # Display response for all pages
     with st.expander("Responses for all pages"):
