@@ -7,26 +7,8 @@ from utils import _load_image_as_base64
 from utils import _generate_poem
 from utils import _random_concept
 from utils import _common_themes
-from utils import _generate_text
+from utils import _critique_poem
 from utils import URLS
-
-def _critique_poem(poem):
-    """
-    Critique the poem using the language model.
-    """
-    prompt = f"""
-    Evaluate the following poem and determine if the addition is good enough. 
-    Respond only with "yes" or "no".
-
-    Poem:
-    {poem}
-    """
-    try:
-        output = _generate_text(prompt)  # Use your existing _generate_text function
-        return output.strip().lower()  # Normalize the response to lowercase for comparison
-    except (ssl.SSLError, RequestException) as e:
-        st.error(f"Network error occurred: {str(e)}. Please try again.")
-        return None
 
 def main():
     """

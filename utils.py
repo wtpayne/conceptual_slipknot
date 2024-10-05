@@ -4,7 +4,9 @@ import textwrap
 import os
 import dotenv
 import mistralai
-import streamlit
+import streamlit as st
+from requests.exceptions import RequestException
+import ssl
 
 
 def _load_image_as_base64(file_path):
@@ -23,7 +25,7 @@ def _generate_poem(concept, theme, url):
     """
     # Combine previous responses to create context, excluding None values
     previous_context = "\n".join(
-        filter(None, streamlit.session_state.responses)  # Only include non-None responses
+        filter(None, st.session_state.responses)  # Only include non-None responses
     )
     return _caption_image(
         f"""
@@ -137,6 +139,26 @@ def _caption_image(prompt: str, url: str, json: bool = False) -> str:
 
 # -----------------------------------------------------------------------------
 
+def _critique_poem(poem):
+    """
+    Critique the poem using the language model.
+    """
+    prompt = f"""
+    Evaluate the following poem and determine if the addition is good enough. 
+    Respond only with "yes" or "no".
+
+    Poem:
+    {poem}
+    """
+    try:
+        output = _generate_text(prompt)  # Use your existing _generate_text function
+        return output.strip().lower()  # Normalize the response to lowercase for comparison
+    except (ssl.SSLError, RequestException) as e:
+        st.error(f"Network error occurred: {str(e)}. Please try again.")
+        return None
+
+# -----------------------------------------------------------------------------
+
 dotenv.load_dotenv()
 THEME_DEFAULT = 'heavy industry'
 API_KEY_MISTRAL = os.getenv('API_KEY_MISTRAL')
@@ -151,5 +173,5 @@ URLS = [
 ]
 
 # Initialize session state for responses if it doesn't exist
-if 'responses' not in streamlit.session_state:
-    streamlit.session_state.responses = [None] * len(URLS)  # Initialize with None for each page
+if 'responses' not in st.session_state:
+    st.session_state.responses = [None] * len(URLS)  # Initialize with None for each page
