@@ -3,8 +3,7 @@ import textwrap
 import os
 import dotenv
 import mistralai
-from requests.exceptions import RequestException
-import ssl
+import random
 import streamlit as st
 
 dotenv.load_dotenv()
@@ -17,7 +16,6 @@ client = mistralai.Mistral(api_key=API_KEY_MISTRAL)
 def _generate_poem(concept, theme, url):
     """
     Generate a poem about an image.
-
     """
     # Combine previous responses to create context, excluding None values
     previous_context = "\n".join(
@@ -49,7 +47,7 @@ def _random_concept():
 
     """
     output = _generate_text(
-        f"""
+        """
         Generate a random 1-word concept. First, think
         step by step using a random wikipedia article.
         Then, extract a concept from that article. Return
@@ -62,11 +60,8 @@ def _random_concept():
         }}
         """,
         json=True)
-    try:
-        result = json.loads(output)
-        return result['concept']
-    except:
-        return None
+    result = json.loads(output)
+    return result['concept']
 
 def _common_themes(concept, url):
     """
@@ -95,11 +90,8 @@ def _common_themes(concept, url):
             """,
         url=url,
         json=True)
-    try:
-        result = json.loads(json_themes)
-        return result['themes']
-    except:
-        return None
+    result = json.loads(json_themes)
+    return result['themes']
 
 def _caption_image(prompt: str, url: str, json: bool = False) -> str:
     """
@@ -140,17 +132,12 @@ def _critique_poem(new_poem, page_index, all_responses):
     Is this new poem good enough to be added to the collection? (yes/no). Be smart about stuff and do not accept bad poems.
 
     """
-    try:
-        output = _generate_text(prompt)  # Use your existing _generate_text function
-        return output.strip().lower()  # Normalize the response to lowercase for comparison
-    except (ssl.SSLError, RequestException) as e:
-        st.error(f"Network error occurred: {str(e)}. Please try again.")
-        return None
+    output = _generate_text(prompt)
+    return output.strip().lower()
 
 def _generate_text(prompt: str, json: bool = False) -> str:
     """
     Generate text from a prompt.
-
     """
     prompt = textwrap.dedent(prompt)
     kwargs = dict(
@@ -159,3 +146,41 @@ def _generate_text(prompt: str, json: bool = False) -> str:
     if json:
         kwargs['response_format'] = {'type': 'json_object'}
     return client.chat.complete(**kwargs).choices[0].message.content
+
+def generate_poem_workflow(page_index, img_base64):
+    """
+    Handle the poem generation workflow, including generating a concept, theme, and attempting
+    multiple poem generations with critique.
+    """
+    concept = _random_concept()
+    st.write(f'Concept: {concept}')
+
+    theme = random.choice(_common_themes(concept, url=img_base64))
+    st.write(f'Theme: {theme["name"]}')
+    st.write(f'Significance: {theme["significance"]}')
+
+    generation, max_generations = 1, 10
+    found_yes, poem = False, None
+
+    while generation <= max_generations and not found_yes:
+        poem = _generate_poem(concept, theme, url=img_base64)
+
+        if st.session_state.is_first_global_generation:
+            critique_result = "yes"
+            st.write(f"Decision for generation {generation}: yes, no critique for the first generation!")
+            st.session_state.is_first_global_generation = False
+        else:
+            critique_result = _critique_poem(poem, page_index, st.session_state.responses)
+
+        if critique_result == "yes":
+            found_yes = True
+            st.session_state.responses[page_index] = poem
+            st.write("Final poem:")
+            st.write(poem)
+        else:
+            generation += 1
+
+    if not found_yes and poem:
+        st.write("Reached maximum generations without a satisfactory poem.")
+        st.write("Last generated poem:")
+        st.write(poem)

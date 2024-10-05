@@ -1,26 +1,34 @@
 import base64
 import streamlit as st
 
-def _load_image_as_base64(file_path):
-    """
-    Convert local image to base64 string.
+def display_responses():
+    with st.expander("Responses for all pages"):
+        for i, response in enumerate(st.session_state.responses):
+            st.write(f"Page {i + 1}: {response if response else 'No response generated yet.'}")
 
-    """
+def navigation_controls(page_index):
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        if st.button('Previous') and page_index > 0:
+            st.session_state.page_index = page_index - 1
+            st.rerun()
+    with col2:
+        st.write(f'Page {page_index + 1} of {len(URLS)}')
+    with col3:
+        if st.button('Next') and page_index < len(URLS) - 1:
+            st.session_state.page_index = page_index + 1
+            st.rerun()
+
+def _load_image_as_base64(file_path):
     with open(file_path, "rb") as image_file:
         return f"data:image/jpeg;base64,{base64.b64encode(image_file.read()).decode('utf-8')}"
 
 def display_image(page_index):
-    """
-    Load and display the image for the current page index.
-    """
     img_base64 = _load_image_as_base64(URLS[page_index])
     st.image(img_base64, use_column_width=True, output_format='auto')
     return img_base64
 
 def replace_current_url():
-    """
-    Replace the current URL with a new one provided by the user.
-    """
     if 'show_url_input' not in st.session_state:
         st.session_state.show_url_input = False
 
@@ -41,11 +49,50 @@ def replace_current_url():
 
 URLS = [
     '/Users/ssk/Downloads/conceptual_slipknot/images/frog.jpeg',
-    '/Users/ssk/Downloads/conceptual_slipknot/images/lion.jpeg',  # Replace with your second image URL
-    '/Users/ssk/Downloads/conceptual_slipknot/images/zebra.jpeg'  # Replace with your third image URL
+    '/Users/ssk/Downloads/conceptual_slipknot/images/lion.jpeg',
+    '/Users/ssk/Downloads/conceptual_slipknot/images/zebra.jpeg'
+    # '/Users/ssk/Downloads/conceptual_slipknot/images/cheetah.jpeg'
 ]
-# /Users/ssk/Downloads/conceptual_slipknot/images/cheetah.jpeg
 
-# Initialize session state for responses if it doesn't exist
 if 'responses' not in st.session_state:
-    st.session_state.responses = [None] * len(URLS)  # Initialize with None for each page
+    st.session_state.responses = [None] * len(URLS)
+
+def apply_styles():
+
+    st.markdown(
+        """
+        <style>
+        html, body, [class*="css"] {
+            margin: 0;
+            padding: 0;
+            overflow-y: hidden !important;
+        }
+        .stApp {
+            max-width: 350px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .stImage {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            max-height: 30vh;
+            width: auto;
+        }
+        .stButton > button {
+            display: inline-block;
+        }
+        .main .block-container {
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+        </style>
+        """, unsafe_allow_html=True
+    )
+
+def initialize_state():
+
+    if 'responses' not in st.session_state:
+        st.session_state.responses = [None] * len(URLS)
+    if 'is_first_global_generation' not in st.session_state:
+        st.session_state.is_first_global_generation = True
