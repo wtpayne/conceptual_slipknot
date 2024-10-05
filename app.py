@@ -9,7 +9,7 @@ from utils import _random_concept
 from utils import _common_themes
 from utils import _critique_poem
 from utils import URLS
-
+    
 def main():
     """
     Main function.
@@ -73,7 +73,7 @@ def main():
         max_generations = 10
         poem = None
         critique_result = None
-        found_yes = False  # Flag to check if we've found a "yes"
+        found_yes = False
 
         while generation <= max_generations and not found_yes:
             try:
@@ -84,7 +84,7 @@ def main():
                     st.write(f"Decision for generation {generation}: yes, no critic for the first generation!")
                     st.session_state.is_first_global_generation = False
                 else:
-                    critique_result = _critique_poem(poem)
+                    critique_result = _critique_poem(poem, page_index, st.session_state.responses)
                     if critique_result is None:
                         st.error("Network error occurred during critique. Please try again.")
                         break

@@ -139,16 +139,29 @@ def _caption_image(prompt: str, url: str, json: bool = False) -> str:
 
 # -----------------------------------------------------------------------------
 
-def _critique_poem(poem):
+def _critique_poem(new_poem, page_index, all_responses):
     """
-    Critique the poem using the language model.
+    Critique the poem using the language model, taking into account all existing poems.
     """
+    context = "\n".join([f"Page {i+1} poem: {poem}" if poem else f"Page {i+1} poem: Not generated yet" 
+                         for i, poem in enumerate(all_responses)])
+    
     prompt = f"""
-    Evaluate the following poem and determine if the addition is good enough. 
+    Evaluate the following new poem in the context of the existing collection of poems. 
     Respond only with "yes" or "no".
 
-    Poem:
-    {poem}
+    Current collection state:
+    {context}
+
+    New poem for Page {page_index + 1}:
+    {new_poem}
+
+    Criteria:
+    - The new poem should fit well with the existing collection.
+    - Consider the overall flow and coherence of the collection.
+
+    Is this new poem good enough to be added to the collection? (yes/no). Be smart about stuff and do not accept bad poems.
+
     """
     try:
         output = _generate_text(prompt)  # Use your existing _generate_text function
@@ -175,3 +188,6 @@ URLS = [
 # Initialize session state for responses if it doesn't exist
 if 'responses' not in st.session_state:
     st.session_state.responses = [None] * len(URLS)  # Initialize with None for each page
+
+    #     - It should maintain a thematic or stylistic consistency with other poems, if they exist.
+    # - If it's the first or only poem, judge it on its own merits.
