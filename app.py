@@ -1,301 +1,94 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-Conceptual Slipknot demo.
-
-"""
-
-import json
-import os
-import sys
-import textwrap
 import random
+import streamlit as st
 
-import dotenv
-import mistralai
-import partialjson
-import streamlit
+from utils import _load_image_as_base64
+from utils import _generate_poem
+from utils import _random_concept
+from utils import _common_themes
+from utils import URLS
 
-
-dotenv.load_dotenv()
-THEME_DEFAULT       = 'heavy industry'
-URL_DEFAULT         = 'https://i.etsystatic.com/7450813/r/il/bbdfb2/1138370933/il_570xN.1138370933_b4pi.jpg'
-API_KEY_MISTRAL     = os.getenv('API_KEY_MISTRAL')
-ID_MODEL_MULTIMODAL = 'pixtral-12b-2409'
-ID_MODEL_CHAT       = 'mistral-large-latest'
-
-
-# -----------------------------------------------------------------------------
-def main(argv: list[str] | None = None):
+def main():
     """
     Main function.
-
     """
-
-    if argv is None:
-        argv = sys.argv
-
-    engine = ConceptEngine()
-
-    str_url = streamlit.text_input(
-        'Enter the URL of the image',
-        value = URL_DEFAULT)
-    if not str_url:
-        streamlit.stop()
-    streamlit.image(str_url)
-
-    count_iter = streamlit.number_input(
-        'Enter the number of iterations',
-        min_value = 1,
-        max_value = 30,
-        value     = 3)
-
-
-
-    if streamlit.button('Generate poem'):
-
-        concept = engine.seed()
-
-        for iter in range(count_iter):
-
-            streamlit.write(f'Iteration: {iter}')
-
-            if iter >= 1:
-                method = engine.plan(concept)
-                streamlit.write(f'Method: {method}')
-                concept = engine.step(concept, method)
-
-            streamlit.write(f'Concept: {concept}')
-            theme = random.choice(engine.theme(concept, url = str_url))
-            streamlit.write(f'Theme: {theme["name"]}')
-            streamlit.write(f'Significance: {theme["significance"]}')
-            poem = engine.poem(concept, theme, url = str_url)
-            streamlit.write(f'Poem: {poem}')
-            streamlit.divider()
-
-
-
-# =============================================================================
-class ConceptEngine:
-    """
-    Concept engine.
-
-    """
-
-    # -------------------------------------------------------------------------
-    def __init__(
-            self,
-            client: mistralai.Mistral | None = None,
-            parser: partialjson.json_parser.JSONParser | None = None):
+    # Apply centering CSS and hide overflow
+    st.markdown(
         """
-        Return a ConceptEngine instance.
+        <style>
+        html, body, [class*="css"] {
+            margin: 0;
+            padding: 0;
+            overflow-y: hidden !important;
+        }
+        .stApp {
+            max-width: 400px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .stImage {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            max-height: 30vh; /* Limit the height of images to 30% of viewport height */
+            width: auto;  /* Maintain aspect ratio */
+        }
+        .stButton > button {
+            display: inline-block;
+        }
+        .main .block-container {
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
-        """
+    # Initialize session state for responses if not already present
+    if 'responses' not in st.session_state:
+        st.session_state.responses = [None] * len(URLS)
 
-        if client is None:
-            client = mistralai.Mistral(api_key = API_KEY_MISTRAL)
-        if parser is None:
-            parser = partialjson.json_parser.JSONParser()
+    page_index = st.session_state.get('page_index', 0)
 
-        self.client = client
-        self.parser = parser
+    str_url = URLS[page_index]
+    img_base64 = _load_image_as_base64(str_url)
 
-    # -------------------------------------------------------------------------
-    def seed(self):
-        """
-        Return a random seed concept.
+    # Center the image using the class defined in the CSS
+    st.image(img_base64, use_column_width=True, output_format='auto')
 
-        """
-        return self._textual(
-            f"""
-            Generate a random 1-word concept. First, think
-            step by step using a random wikipedia article.
-            Then, extract a concept from that article. Return
-            the result as a JSON object.
+    if st.button('Generate poem'):
+        concept = _random_concept()
+        st.write(f'Concept: {concept}')
 
-            Example output format:
-            {{
-                "reasoning": "A spring is a natural exit point at which groundwater emerges from the aquifer and flows onto the top of the Earth's crust (pedosphere) to become surface water. "
-                "concept":  "crust"
-            }}
-            """,
-            json = True).get('concept', None)
+        theme = random.choice(_common_themes(concept, url=img_base64))
+        st.write(f'Theme: {theme["name"]}')
+        st.write(f'Significance: {theme["significance"]}')
 
-    # -------------------------------------------------------------------------
-    def plan(self, concept):
-        """
-        Generate a plan.
+        # Generate poem and replace the existing response for the current page
+        poem = _generate_poem(concept, theme, url=img_base64)
+        st.session_state.responses[page_index] = poem  # Store the poem in session state
+        st.write(poem)
 
-        """
+    # Display response for all pages
+    with st.expander("Responses for all pages"):
+        for i, response in enumerate(st.session_state.responses):
+            if response is not None:
+                st.write(f"Page {i + 1}: {response}")
+            else:
+                st.write(f"Page {i + 1}: No response generated yet.")
 
-        return self._textual(
-            f"""
-            Select one of the following methods to explore <concept> further.
-            
-            * Concept Expansion
-            * Metaphorical Reframing
-            * Context Switching
-            * Contrastive Prompts
-            * Boundary Testing
-            * Blending
+    # Navigation buttons
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        if st.button('Previous') and page_index > 0:
+            st.session_state.page_index = page_index - 1
+            st.rerun()
+    with col2:
+        st.write(f'Page {page_index + 1} of {len(URLS)}')
+    with col3:
+        if st.button('Next') and page_index < len(URLS) - 1:
+            st.session_state.page_index = page_index + 1
+            st.rerun()
 
-            <concept>
-            {concept}
-            <concept>
-
-            example output format:
-            {{
-                "method": "Concept Expansion"
-            }}
-            """,
-            json = True).get('method', None)
-        
-    # -----------------------------------------------------------------------------
-    def step(self, concept, method):
-        """
-        Take the next step in the plan.
-
-        """
-
-        return self._textual(
-            f"""
-            Starting with <concept>, apply <method> to generate a new concept.
-
-            <concept>
-            {concept}
-            <concept>
-
-            <method>
-            {method}
-            <method>
-            
-            example output format:
-            {{
-                "concept": "stillness"
-            }}
-            """,
-            json = True).get('concept', None)
-
-    # -------------------------------------------------------------------------
-    def theme(self, concept, url):
-        """
-        Return a list of themes common to image and concept.
-
-        """
-
-        return self._multimodal(
-            f"""
-            Extract 5 common themes that link the image with <concept>. 
-            Return the result as a JSON object.
-
-            <concept>
-            {concept}
-            </concept>
-
-            Example output format:
-            {{
-                "themes": [
-                    {{
-                        "name": "stillness",
-                        "significance": "the stillness of a winter scene"
-                    }}
-                ]
-            }}
-
-            """,
-            url  = url,
-            json = True).get('themes', None)
-
-    # -----------------------------------------------------------------------------
-    def poem(self, concept, theme, url):
-        """
-        Generate poem from concept, theme and image.
-
-        """
-        return self._multimodal(
-            f"""
-            Write a 5-line poem about this image using the
-            <concept> and common <theme> below. Do NOT use
-            explicit words related to the <theme>.
-
-            <concept>
-            {concept}
-            <concept>
-
-            <theme>
-            {theme['name']}: {theme['significance']}
-            <theme>
-            """,
-            url  = url,
-            json = False)
-
-    # -------------------------------------------------------------------------
-    def _textual(self, prompt: str, json: bool = False) -> str | dict:
-        """
-        Generate from text.
-
-        """
-
-        prompt = textwrap.dedent(prompt)
-        kwargs = dict(
-            model    = ID_MODEL_CHAT,
-            messages = [{'role': 'user', 'content': prompt }])
-        if json:
-            kwargs['response_format'] = { 'type': 'json_object' }
-
-        return self._parse(
-            self.client.chat.complete(**kwargs).choices[0].message.content)
-
-    # -------------------------------------------------------------------------
-    def _multimodal(self, prompt: str, url: str, json: bool = False) -> str:
-        """
-        Generate from multimodal input.
-
-        """
-
-        prompt = textwrap.dedent(prompt)
-        kwargs = dict(
-            model    = ID_MODEL_MULTIMODAL,
-            messages = [{'role':    'user',
-                        'content': [{ 'type': 'text',      'text': prompt },
-                                    { 'type': 'image_url', 'image_url': url }]}])
-        if json:
-            kwargs['response_format'] = { 'type': 'json_object' }
-
-        return self._parse(
-            self.client.chat.complete(**kwargs).choices[0].message.content)
-
-    # -------------------------------------------------------------------------
-    def _parse(self, text: str) -> dict | list | str:
-        """
-        Parse text which may or may not be JSON.
-
-        """
-
-        try:
-            return self.parser.parse(text)
-        except:
-            return text
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# -----------------------------------------------------------------------------
 if __name__ == '__main__':
-    sys.exit(main())
+    main()
