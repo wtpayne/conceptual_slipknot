@@ -3,18 +3,14 @@ import streamlit as st
 import ssl
 from requests.exceptions import RequestException
 
-from utils import _load_image_as_base64
-from utils import _generate_poem
-from utils import _random_concept
-from utils import _common_themes
-from utils import _critique_poem
+from utils import display_image, replace_current_url
 from utils import URLS
-    
-def main():
+from calls import _random_concept, _common_themes, _generate_poem, _critique_poem
+
+def apply_styles():
     """
-    Main function.
+    Apply custom CSS styles to center elements and control image overflow.
     """
-    # Apply centering CSS and hide overflow
     st.markdown(
         """
         <style>
@@ -32,8 +28,8 @@ def main():
             display: block;
             margin-left: auto;
             margin-right: auto;
-            max-height: 30vh; /* Limit the height of images to 30% of viewport height */
-            width: auto;  /* Maintain aspect ratio */
+            max-height: 30vh;
+            width: auto;
         }
         .stButton > button {
             display: inline-block;
@@ -43,84 +39,76 @@ def main():
             padding-bottom: 1rem;
         }
         </style>
-        """,
-        unsafe_allow_html=True
+        """, unsafe_allow_html=True
     )
 
-    # Initialize session state for responses and global first generation if not already present
+def initialize_state():
+    """
+    Initialize session state variables for responses and global first-generation flag.
+    """
     if 'responses' not in st.session_state:
         st.session_state.responses = [None] * len(URLS)
     if 'is_first_global_generation' not in st.session_state:
         st.session_state.is_first_global_generation = True
 
-    page_index = st.session_state.get('page_index', 0)
+def generate_poem_workflow(page_index, img_base64):
+    """
+    Handle the poem generation workflow, including generating a concept, theme, and attempting
+    multiple poem generations with critique.
+    """
+    concept = _random_concept()
+    st.write(f'Concept: {concept}')
 
-    str_url = URLS[page_index]
-    img_base64 = _load_image_as_base64(str_url)
+    theme = random.choice(_common_themes(concept, url=img_base64))
+    st.write(f'Theme: {theme["name"]}')
+    st.write(f'Significance: {theme["significance"]}')
 
-    # Center the image using the class defined in the CSS
-    st.image(img_base64, use_column_width=True, output_format='auto')
+    generation, max_generations = 1, 10
+    found_yes, poem = False, None
 
-    if st.button('Generate poem'):
-        concept = _random_concept()
-        st.write(f'Concept: {concept}')
+    while generation <= max_generations and not found_yes:
+        try:
+            poem = _generate_poem(concept, theme, url=img_base64)
 
-        theme = random.choice(_common_themes(concept, url=img_base64))
-        st.write(f'Theme: {theme["name"]}')
-        st.write(f'Significance: {theme["significance"]}')
+            if st.session_state.is_first_global_generation:
+                critique_result = "yes"
+                st.write(f"Decision for generation {generation}: yes, no critique for the first generation!")
+                st.session_state.is_first_global_generation = False
+            else:
+                critique_result = _critique_poem(poem, page_index, st.session_state.responses)
+                if critique_result is None:
+                    st.error("Network error occurred during critique. Please try again.")
+                    break
 
-        generation = 1
-        max_generations = 10
-        poem = None
-        critique_result = None
-        found_yes = False
-
-        while generation <= max_generations and not found_yes:
-            try:
-                poem = _generate_poem(concept, theme, url=img_base64)
-
-                if st.session_state.is_first_global_generation:
-                    critique_result = "yes"
-                    st.write(f"Decision for generation {generation}: yes, no critic for the first generation!")
-                    st.session_state.is_first_global_generation = False
-                else:
-                    critique_result = _critique_poem(poem, page_index, st.session_state.responses)
-                    if critique_result is None:
-                        st.error("Network error occurred during critique. Please try again.")
-                        break
-                
-                st.write(f"Decision for generation {generation}: {critique_result}")
-
-                if critique_result == "yes" or critique_result == '""yes""' or critique_result == "'yes'" or critique_result == 'yes.':
-                    found_yes = True
-                    st.session_state.responses[page_index] = poem
-                    st.write("Final poem:")
-                    st.write(poem)
-                else:
-                    generation += 1
-
-            except (ssl.SSLError, RequestException) as e:
-                st.error(f"Network error occurred: {str(e)}. Please try again.")
-                break
-
-        # This block will only execute if we've gone through all generations without a "yes"
-        if not found_yes:
-            if poem:
-                st.write("Reached maximum generations without a satisfactory poem.")
-                st.write("Last generated poem:")
+            if critique_result == "yes":
+                found_yes = True
+                st.session_state.responses[page_index] = poem
+                st.write("Final poem:")
                 st.write(poem)
             else:
-                st.error("Failed to generate a poem due to network errors. Please try again.")
+                generation += 1
 
-    # Display response for all pages
+        except (ssl.SSLError, RequestException) as e:
+            st.error(f"Network error occurred: {str(e)}. Please try again.")
+            break
+
+    if not found_yes and poem:
+        st.write("Reached maximum generations without a satisfactory poem.")
+        st.write("Last generated poem:")
+        st.write(poem)
+
+def display_responses():
+    """
+    Display responses for all pages.
+    """
     with st.expander("Responses for all pages"):
         for i, response in enumerate(st.session_state.responses):
-            if response is not None:
-                st.write(f"Page {i + 1}: {response}")
-            else:
-                st.write(f"Page {i + 1}: No response generated yet.")
+            st.write(f"Page {i + 1}: {response if response else 'No response generated yet.'}")
 
-    # Navigation buttons
+def navigation_controls(page_index):
+    """
+    Display navigation controls for navigating between pages.
+    """
     col1, col2, col3 = st.columns([1, 1, 1])
     with col1:
         if st.button('Previous') and page_index > 0:
@@ -132,6 +120,26 @@ def main():
         if st.button('Next') and page_index < len(URLS) - 1:
             st.session_state.page_index = page_index + 1
             st.rerun()
+
+def main():
+    """
+    Main function to run the Streamlit app.
+    """
+    apply_styles()
+    initialize_state()
+
+    page_index = st.session_state.get('page_index', 0)
+
+    # Move the Replace URL button and functionality to the top
+    replace_current_url()
+
+    img_base64 = display_image(page_index)
+
+    if st.button('Generate poem', key="generate_poem_button"):
+        generate_poem_workflow(page_index, img_base64)
+
+    display_responses()
+    navigation_controls(page_index)
 
 if __name__ == '__main__':
     main()
