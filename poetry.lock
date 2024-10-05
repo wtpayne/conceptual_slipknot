@@ -722,6 +722,17 @@ test = ["hypothesis (>=6.46.1)", "pytest (>=7.3.2)", "pytest-xdist (>=2.2.0)"]
 xml = ["lxml (>=4.9.2)"]
 
 [[package]]
+name = "partialjson"
+version = "0.0.8"
+description = "Parse incomplete or partial json"
+optional = false
+python-versions = "*"
+files = [
+    {file = "partialjson-0.0.8-py3-none-any.whl", hash = "sha256:22c6c60944137f931a7033fa0eeee2d74b49114f3d45c25a560b07a6ebf22b76"},
+    {file = "partialjson-0.0.8.tar.gz", hash = "sha256:91217e19a15049332df534477f56420065ad1729cedee7d8c7433e1d2acc7dca"},
+]
+
+[[package]]
 name = "pillow"
 version = "10.4.0"
 description = "Python Imaging Library (Fork)"
@@ -1464,4 +1475,4 @@ watchmedo = ["PyYAML (>=3.10)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "bc1d0a906aea26d9200b5d2b40ab43dd682dac8bd080da1e57940b6c6a1de41b"
+content-hash = "d93ae00dbdea99b4991de75d3932cd1a6b54a5c4ab303324113e6e91bf4f45bb"
