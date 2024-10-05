@@ -47,20 +47,23 @@ def main(argv: list[str] | None = None):
     #     value = THEME_DEFAULT)
 
     if streamlit.button('Generate poem'):
-        str_poem = generate_poem(url = str_url)
-        streamlit.write(str_poem)
+
+        concept = _random_concept()
+        streamlit.write(f'Concept: {concept}')
+
+        theme = random.choice(_common_themes(concept, url = str_url))
+        streamlit.write(f'Theme: {theme["name"]}')
+        streamlit.write(f'Significance: {theme["significance"]}')
+        
+        poem = _generate_poem(concept, theme, url = str_url)
+        streamlit.write(poem)
 
 # -----------------------------------------------------------------------------
-def generate_poem(url):
+def _generate_poem(concept, theme, url):
     """
     Generate a poem about an image.
 
     """
- 
-    concept    = _random_concept()
-    list_theme = _common_themes(concept, url)
-    theme      = random.choice(list_theme)
-    
     return _caption_image(
         f"""
         Write a 5-line poem about this image using the
@@ -75,7 +78,8 @@ def generate_poem(url):
         {theme['name']}: {theme['significance']}
         <theme>
         """,
-        url = url)
+        url  = url,
+        json = False)
 
 
 # -----------------------------------------------------------------------------
