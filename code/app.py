@@ -30,11 +30,5 @@ def main():
     display_responses()
     navigation_controls(page_index)
 
-    # Add a refresh button to reset the heading
-    if st.button('Refresh'):
-        st.session_state.heading_shown = False
-        st.session_state.page_index = 0
-        st.rerun()
-
 if __name__ == '__main__':
     main()

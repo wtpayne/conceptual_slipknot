@@ -25,7 +25,7 @@ def replace_current_url():
     if 'show_url_input' not in st.session_state:
         st.session_state.show_url_input = False
 
-    if st.button("Replace URL", key="replace_url_button"):
+    if st.button("Click to replace image! (add link)", key="replace_url_button"):
         st.session_state.show_url_input = not st.session_state.show_url_input
 
     if st.session_state.show_url_input:
