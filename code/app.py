@@ -16,7 +16,7 @@ def main():
 
     # Display heading only on the first page and if it hasn't been shown yet
     if page_index == 0 and not st.session_state.heading_shown:
-        st.markdown("<h1 class='heading'>Co-author: The multi-modal copilot for novelists</h1>", unsafe_allow_html=True)
+        st.markdown("<strong>Co-author:</strong> A multi-modal copilot for authors", unsafe_allow_html=True)
         st.session_state.heading_shown = True
 
     # Move the Replace URL button and functionality to the top
