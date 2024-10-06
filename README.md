@@ -6,7 +6,7 @@
 ---
 
 ## **Core Idea:**
-**Co-Author** is designed to be a creative co-pilot for authors, enhancing the literary crafting process by generating poetry based on images and themes. Think of it as a control-net for transforming visual art into textual creativity!
+**Co-Author** is designed to be a creative criticed multi-modal co-pilot for authors, enhancing the literary crafting process by generating poetry based on images and themes. Think of it as a control-net for transforming visual art into textual creativity!
 
 ---
 
