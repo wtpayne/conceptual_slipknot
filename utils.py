@@ -6,18 +6,11 @@ def display_responses():
         for i, response in enumerate(st.session_state.responses):
             st.write(f"Page {i + 1}: {response if response else 'No response generated yet.'}")
 
-def navigation_controls(page_index):
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col1:
-        if st.button('Previous') and page_index > 0:
-            st.session_state.page_index = page_index - 1
-            st.rerun()
-    with col2:
-        st.write(f'Page {page_index + 1} of {len(URLS)}')
-    with col3:
-        if st.button('Next') and page_index < len(URLS) - 1:
-            st.session_state.page_index = page_index + 1
-            st.rerun()
+def initialize_state():
+    if 'responses' not in st.session_state:
+        st.session_state.responses = [None] * len(URLS)
+    if 'is_first_global_generation' not in st.session_state:
+        st.session_state.is_first_global_generation = True
 
 def _load_image_as_base64(file_path):
     with open(file_path, "rb") as image_file:
@@ -56,43 +49,3 @@ URLS = [
 
 if 'responses' not in st.session_state:
     st.session_state.responses = [None] * len(URLS)
-
-def apply_styles():
-
-    st.markdown(
-        """
-        <style>
-        html, body, [class*="css"] {
-            margin: 0;
-            padding: 0;
-            overflow-y: hidden !important;
-        }
-        .stApp {
-            max-width: 350px;
-            margin: 0 auto;
-            text-align: center;
-        }
-        .stImage {
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
-            max-height: 30vh;
-            width: auto;
-        }
-        .stButton > button {
-            display: inline-block;
-        }
-        .main .block-container {
-            padding-top: 1rem;
-            padding-bottom: 1rem;
-        }
-        </style>
-        """, unsafe_allow_html=True
-    )
-
-def initialize_state():
-
-    if 'responses' not in st.session_state:
-        st.session_state.responses = [None] * len(URLS)
-    if 'is_first_global_generation' not in st.session_state:
-        st.session_state.is_first_global_generation = True

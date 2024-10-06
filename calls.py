@@ -25,7 +25,8 @@ def _generate_poem(concept, theme, url):
         f"""
         Write a haiku about this image using the
         <concept> and common <theme> below. Do NOT use
-        explicit words related to the <theme>.
+        explicit words related to the <theme>. Try not to
+        use the concept and theme word but convey them.
 
         Previous context:
         {previous_context}
