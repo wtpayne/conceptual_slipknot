@@ -1,6 +1,6 @@
 # **Co-Author**  
 **Team:** conceptual_slipknot  
-**Members:** Sashank, Bill, and Soumya  
+**Members:** Sashank, Bill, Soumya and `Mistral AI`  
 **Submission for the London Mistral Hackathon**
 
 ---
