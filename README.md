@@ -41,6 +41,10 @@
 
 ---
 
+## ** To Use: **
+run `run` :P
+
+
 ## **Technical Notes:**
 - To utilize the Mistral API: 
   ```bash
